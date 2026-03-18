@@ -1,7 +1,14 @@
-# Private Credit Card Statement Analyzer
+# PersonalFinanceInsights
 
-Client-side React application for statement parsing, categorization, and analytics.
-All processing stays in-browser memory only.
+Easily extract transactions from your credit card PDF statements, 100% offline and private. Runs completely locally with no cloud upload and turns messy statements into usable dashboards for secure personal finance tracking.
+
+## What It Does
+
+- Parses supported credit card statement PDFs locally in the browser
+- Extracts transactions and statement metadata
+- Categorizes spending and groups similar merchants
+- Shows dashboards, charts, refund tracking, and transaction search
+- Exports transaction CSV and printable PDF reports
 
 ## Privacy Guarantees
 
@@ -9,19 +16,30 @@ All processing stays in-browser memory only.
 - No API calls
 - No analytics or telemetry
 - No cookies
-- No persistent storage unless user chooses browser-level actions manually
+- No persistent storage unless the user explicitly performs a browser-level action
 - Data resets on page refresh
-- `Clear All Data` button wipes all in-memory state
 
 ## Tech Stack
 
 - React + Vite
 - TypeScript
-- TailwindCSS
+- Tailwind CSS
 - Chart.js via `react-chartjs-2`
-- `pdf.js` (`pdfjs-dist`) for PDF parsing
+- `pdfjs-dist` for PDF parsing
 
-## Setup (Vite)
+## Supported Input
+
+- PDF only
+- File size up to 10 MB
+- Password-protected PDFs supported through a local password prompt
+
+Currently tested statement formats:
+
+- AU Small Finance Bank Credit Card
+- ICICI Bank Credit Card
+- Axis Bank Credit Card
+
+## Local Setup
 
 1. Install dependencies:
 
@@ -29,81 +47,28 @@ All processing stays in-browser memory only.
 npm install
 ```
 
-2. Run development server:
+2. Run the development server:
 
 ```bash
 npm run dev
 ```
 
-3. Build production bundle:
+3. Build the production bundle:
 
 ```bash
 npm run build
 ```
 
-4. Preview production bundle:
+4. Preview the production bundle:
 
 ```bash
 npm run preview
 ```
 
-## Project Structure
-
-```text
-.
-├─ src/
-│  ├─ analytics/
-│  │  ├─ filtering.ts
-│  │  └─ metrics.ts
-│  ├─ categorization/
-│  │  ├─ categorizer.ts
-│  │  └─ defaultRules.ts
-│  ├─ components/
-│  │  ├─ charts/
-│  │  │  ├─ CategoryPieChart.tsx
-│  │  │  ├─ MonthlyBarChart.tsx
-│  │  │  └─ TrendLineChart.tsx
-│  │  ├─ CategoryEditor.tsx
-│  │  ├─ FileUpload.tsx
-│  │  ├─ FiltersPanel.tsx
-│  │  ├─ Header.tsx
-│  │  ├─ PrivacyNotice.tsx
-│  │  ├─ SummaryCards.tsx
-│  │  ├─ TopMerchants.tsx
-│  │  └─ TransactionTable.tsx
-│  ├─ constants/
-│  │  └─ strings.ts
-│  ├─ mock/
-│  │  └─ mockTransactions.ts
-│  ├─ parsing/
-│  │  ├─ csvParser.ts
-│  │  ├─ normalize.ts
-│  │  ├─ parseFile.ts
-│  │  ├─ pdfParser.ts
-│  │  └─ xlsxParser.ts
-│  ├─ types/
-│  │  └─ transaction.ts
-│  ├─ utils/
-│  │  └─ date.ts
-│  ├─ App.tsx
-│  ├─ index.css
-│  └─ main.tsx
-├─ index.html
-├─ package.json
-├─ postcss.config.js
-├─ tailwind.config.js
-├─ tsconfig.app.json
-├─ tsconfig.json
-├─ tsconfig.node.json
-└─ vite.config.ts
-```
-
 ## Notes
 
-- PDF parsing uses a generic statement-row regex and may need adjustment for specific bank formats.
-- Password-protected PDFs are supported via local password prompt and in-memory decrypt/parse.
-- Current upload support: PDF only (up to 10 MB).
-- Dashboard includes extracted statement fields: bank name, total bill amount, minimum due, payment due date, and statement period.
-- If any field cannot be confidently extracted from a bank format, the field remains editable so you can fill it manually.
-- Recurring detection logic uses merchant + amount similarity (`+-5%`).
-- Anomaly highlighting uses z-score threshold `> 2.5`.
+- Parsing accuracy depends on the PDF layout used by each bank
+- Unsupported bank layouts may still fail until explicit parser support is added
+- Dashboard metadata includes bank name, total bill amount, minimum due, payment due date, and statement period where extraction is possible
+- Recurring detection uses merchant plus amount similarity within a small tolerance
+- Anomaly highlighting uses a z-score threshold greater than `2.5`

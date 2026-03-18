@@ -1,0 +1,192 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-page: #ecf2fb;
+  --bg-surface: #ffffff;
+  --bg-surface-subtle: #f5f9ff;
+  --bg-surface-tint: #e9f1ff;
+  --bg-surface-mint: #eef8f4;
+  --bg-surface-indigo: #eef1ff;
+  --text-primary: #0f172a;
+  --text-muted: #4f5f79;
+  --border-soft: #d2deee;
+  --accent: #0b84d8;
+  --shadow-soft: 0 10px 26px rgba(15, 23, 42, 0.06);
+  --radius-lg: 14px;
+}
+
+body {
+  color: var(--text-primary);
+  background: radial-gradient(circle at top left, #e7edf6 0%, var(--bg-page) 35%, var(--bg-page) 100%);
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Text", "Helvetica Neue",
+    Arial, sans-serif;
+  line-height: 1.45;
+}
+
+.dark {
+  --bg-page: #020617;
+  --bg-surface: #0f172a;
+  --bg-surface-subtle: #111827;
+  --bg-surface-tint: #122237;
+  --bg-surface-mint: #112624;
+  --bg-surface-indigo: #1a1f38;
+  --text-primary: #e2e8f0;
+  --text-muted: #94a3b8;
+  --border-soft: #334155;
+  --shadow-soft: 0 14px 28px rgba(2, 6, 23, 0.45);
+}
+
+.dark body {
+  color: var(--text-primary);
+  background: radial-gradient(circle at top left, #111827 0%, #020617 50%, #020617 100%);
+}
+
+.dark .bg-white {
+  background-color: #0f172a !important;
+}
+
+.dark .bg-slate-50 {
+  background-color: #111827 !important;
+}
+
+.dark .bg-slate-100 {
+  background-color: #1f2937 !important;
+}
+
+.dark .text-slate-900,
+.dark .text-slate-800 {
+  color: #e2e8f0 !important;
+}
+
+.dark .text-slate-700,
+.dark .text-slate-600,
+.dark .text-slate-500 {
+  color: #cbd5e1 !important;
+}
+
+.dark .border-slate-300,
+.dark .border-slate-200,
+.dark .border-slate-100 {
+  border-color: #334155 !important;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #111827;
+  color: #e2e8f0;
+  border-color: #334155;
+}
+
+.card {
+  border: 1px solid var(--border-soft);
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.card-subtle {
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(145deg, var(--bg-surface), var(--bg-surface-subtle));
+  border-radius: var(--radius-lg);
+}
+
+.card-tint {
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(140deg, var(--bg-surface), var(--bg-surface-tint));
+  border-radius: var(--radius-lg);
+}
+
+.card-mint {
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(140deg, var(--bg-surface), var(--bg-surface-mint));
+  border-radius: var(--radius-lg);
+}
+
+.card-indigo {
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(140deg, var(--bg-surface), var(--bg-surface-indigo));
+  border-radius: var(--radius-lg);
+}
+
+.card-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+}
+
+.section-title {
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 10px;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: transform 120ms ease, opacity 120ms ease, background 120ms ease;
+}
+
+.btn-primary:hover {
+  background: #0a74c0;
+}
+
+.btn-primary:active {
+  transform: translateY(1px);
+}
+
+.btn-secondary {
+  border: 1px solid var(--border-soft);
+  background: #fff;
+  color: #1e293b;
+  border-radius: 10px;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 550;
+  transition: background 120ms ease, transform 120ms ease;
+}
+
+.btn-secondary:hover {
+  background: #f8fafc;
+}
+
+.dark .btn-secondary {
+  border-color: #334155;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.dark .btn-secondary:hover {
+  background: #111827;
+}
+
+.input-field {
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  background: #fff;
+  font-size: 0.875rem;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(11, 132, 216, 0.15);
+}
+
+.dark .input-field {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-color: #334155;
+}

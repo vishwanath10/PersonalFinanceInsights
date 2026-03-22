@@ -41,6 +41,28 @@ function extractMonthAndYear(query: string): { month?: number; year?: number } {
 export function parseIntent(rawQuery: string): ParsedIntent {
   const query = rawQuery.trim().toLowerCase();
 
+  if (
+    /\b(which|what)\s+category\b.*\b(highest|top|largest)\b.*\bthis month\b/.test(query) ||
+    /\b(highest|top|largest)\s+category\b.*\bthis month\b/.test(query)
+  ) {
+    return { type: "top_category_this_month" };
+  }
+
+  if (
+    /\bhow has\b.*\bspending\b.*\bchanged\b/.test(query) ||
+    /\bspending\b.*\bchanged over time\b/.test(query) ||
+    /\bspending trend\b/.test(query)
+  ) {
+    return { type: "spending_change" };
+  }
+
+  if (
+    /\bwhere am i spending the most\b/.test(query) ||
+    /\b(top|highest|largest)\s+category\b/.test(query)
+  ) {
+    return { type: "top_category" };
+  }
+
   const merchantSpendMatch = query.match(
     /(?:how much|total|what).*?(?:spen[dt]|paid).*?(?:on|at|to)\s+(.+)$/
   );
@@ -49,13 +71,17 @@ export function parseIntent(rawQuery: string): ParsedIntent {
   }
 
   const categorySpendMatch = query.match(
-    /(?:how much|total|what).*?(?:spen[dt]|paid).*?(?:in|for)\s+(food and dining|transportation|travel|shopping|groceries|entertainment|utilities|fuel|healthcare|finance and wallet|investments|insurance|education|government and tax|others)\b/
+    /(?:how much|total|what).*?(?:spen[dt]|paid).*?(?:in|for)\s+(food and dining|food|transportation|travel|shopping|groceries|bills|transfers|entertainment|utilities|fuel|healthcare|finance and wallet|investments|insurance|education|government and tax|others)\b/
   );
   if (categorySpendMatch) {
     return { type: "category_spend", category: categorySpendMatch[1] };
   }
 
-  if (/\btop\b.*\bmerchant/.test(query)) {
+  if (
+    /\btop\b.*\bmerchant/.test(query) ||
+    /\bwhich merchants?\b.*\b(biggest|highest|top)\b/.test(query) ||
+    /\bbiggest merchants?\b/.test(query)
+  ) {
     const limit = Number(query.match(/\btop\s+(\d+)\b/)?.[1] ?? "5");
     return { type: "top_merchants", limit: Number.isFinite(limit) ? limit : 5 };
   }

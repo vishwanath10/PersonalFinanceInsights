@@ -6,6 +6,9 @@ export type ChatIntentType =
   | "month_spend"
   | "top_merchants"
   | "merchant_credits"
+  | "top_category"
+  | "spending_change"
+  | "top_category_this_month"
   | "help";
 
 export type ParsedIntent = {

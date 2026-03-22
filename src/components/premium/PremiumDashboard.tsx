@@ -38,6 +38,8 @@ type PremiumDashboardProps = {
   sortField: SortField;
   sortDirection: SortDirection;
   categoryRules: Record<string, string[]>;
+  onCategoryRulesSave: (nextRules: Record<string, string[]>) => void;
+  onCategoryRulesReset: () => void;
 };
 
 function formatCurrency(amount: number): string {
@@ -70,12 +72,15 @@ export function PremiumDashboard({
   onCategoryChange,
   sortField,
   sortDirection,
-  categoryRules
+  categoryRules,
+  onCategoryRulesSave,
+  onCategoryRulesReset
 }: PremiumDashboardProps): JSX.Element {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [rulesOpenToken, setRulesOpenToken] = useState(0);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
+  const categoryRuleCount = Object.keys(categoryRules).length;
 
   const debitCount = filteredTransactions.filter((txn) => txn.type === "debit").length;
   const creditCount = filteredTransactions.filter((txn) => txn.type === "credit").length;
@@ -224,10 +229,13 @@ export function PremiumDashboard({
             <SupportedStatementsDialog />
             <button
               type="button"
-              className="btn-secondary"
+              className="btn-secondary inline-flex items-center gap-2"
               onClick={() => setRulesOpenToken((prev) => prev + 1)}
             >
-              Category Rules
+              <span>Category Rules</span>
+              <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-900 dark:bg-sky-900/50 dark:text-sky-100">
+                {categoryRuleCount}
+              </span>
             </button>
             <button
               type="button"
@@ -494,6 +502,8 @@ export function PremiumDashboard({
         rules={categoryRules}
         showFloatingTrigger={false}
         forceOpenToken={rulesOpenToken}
+        onSave={onCategoryRulesSave}
+        onReset={onCategoryRulesReset}
       />
     </div>
   );

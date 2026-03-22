@@ -25,6 +25,9 @@ export function PdfPasswordPrompt({
         Enter password to decrypt and parse this file:
         <span className="ml-1 break-all font-semibold">{fileName}</span>
       </p>
+      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        The password is used only for this parse attempt and is not stored.
+      </p>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <input
           type={revealPassword ? "text" : "password"}

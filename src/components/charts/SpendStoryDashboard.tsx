@@ -1,4 +1,4 @@
-import { Bar } from "react-chartjs-2";
+import { Bar, Doughnut } from "react-chartjs-2";
 import type { Transaction } from "../../types/transaction";
 
 type SpendStoryDashboardProps = {
@@ -38,6 +38,18 @@ function percentile(sortedValues: number[], p: number): number {
 
 function axisCurrency(value: string | number): string {
   return `Rs${Number(value).toLocaleString("en-IN")}`;
+}
+
+function formatPercent(value: number): string {
+  return `${value.toFixed(value >= 10 ? 0 : 1)}%`;
+}
+
+function formatSignedCurrency(amount: number): string {
+  if (amount === 0) {
+    return "Rs0";
+  }
+  const prefix = amount > 0 ? "+" : "-";
+  return `${prefix}Rs${Math.abs(amount).toLocaleString("en-IN")}`;
 }
 
 function daysBetween(a: Date, b: Date): number {
@@ -89,11 +101,29 @@ export function SpendStoryDashboard({ transactions }: SpendStoryDashboardProps):
   const monthlyKeys = [...new Set([...Object.keys(monthlyDebitMap), ...Object.keys(monthlyCreditMap)])].sort();
   const monthlyDebitValues = monthlyKeys.map((key) => monthlyDebitMap[key] ?? 0);
   const monthlyCreditValues = monthlyKeys.map((key) => monthlyCreditMap[key] ?? 0);
+  const monthlyFlow = monthlyKeys.map((month, index) => ({
+    month,
+    debit: monthlyDebitValues[index],
+    credit: monthlyCreditValues[index],
+    net: monthlyCreditValues[index] - monthlyDebitValues[index]
+  }));
+  const peakDebitMonth = [...monthlyFlow].sort((a, b) => b.debit - a.debit)[0];
+  const peakCreditMonth = [...monthlyFlow].sort((a, b) => b.credit - a.credit)[0];
+  const widestGapMonth = [...monthlyFlow].sort((a, b) => Math.abs(b.net) - Math.abs(a.net))[0];
 
   const rankedCategories = Object.entries(categoryMap)
     .map(([category, amount]) => ({ category, amount }))
     .sort((a, b) => b.amount - a.amount);
-  const categoryTop = rankedCategories.slice(0, 6);
+  const categorySlices = rankedCategories.slice(0, 5);
+  const remainingCategoryAmount = rankedCategories
+    .slice(5)
+    .reduce((sum, item) => sum + item.amount, 0);
+  const categoryMix =
+    remainingCategoryAmount > 0
+      ? [...categorySlices, { category: "Others", amount: remainingCategoryAmount }]
+      : categorySlices;
+  const categoryPalette = ["#fb7185", "#fb923c", "#fbbf24", "#2dd4bf", "#38bdf8", "#818cf8"];
+  const topCategory = categoryMix[0];
 
   const weekdayLabels = WEEKDAYS;
   const weekdayValues = weekdayLabels.map((day) => weekdayMap[day]);
@@ -197,66 +227,216 @@ export function SpendStoryDashboard({ transactions }: SpendStoryDashboardProps):
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <article className="card-subtle rounded-lg p-3">
           <div className="mb-1 flex items-center justify-between gap-2">
-            <p className="text-sm font-semibold">1) Monthly Credit vs Debit</p>
-            <HelpTip text="Compare each month: higher debit bars mean more spending, higher credit bars mean more refunds/payments." />
+            <p className="text-sm font-semibold">1) Monthly Money Flow</p>
+            <HelpTip text="Credits, refunds, and payments sit above zero. Debit spend sits below zero. The wider the gap, the more uneven that month was." />
           </div>
           <p className="mb-2 text-xs text-slate-500">
-            Clear month-by-month comparison of money out (debit) versus money in (credit).
+            Rounded bars make the monthly inflow-versus-spend split easier to scan, with one shared zero line for quick comparison.
           </p>
-          <div className="h-56">
-            <Bar
-              data={{
-                labels: monthlyKeys.map(toMonthLabel),
-                datasets: [
-                  {
-                    label: "Debit (Spend)",
-                    data: monthlyDebitValues,
-                    backgroundColor: "#0f766e"
-                  },
-                  {
-                    label: "Credit (Refund/Payment)",
-                    data: monthlyCreditValues,
-                    backgroundColor: "#2563eb"
-                  }
-                ]
-              }}
-              options={{
-                maintainAspectRatio: false,
-                plugins: { legend: { position: "bottom" } },
-                scales: { y: { ticks: { callback: axisCurrency } } }
-              }}
-            />
-          </div>
+          {monthlyFlow.length === 0 ? (
+            <p className="text-sm text-slate-500">No monthly transactions found.</p>
+          ) : (
+            <>
+              <div className="mb-3 flex flex-wrap gap-2 text-[11px] text-slate-500">
+                <span className="rounded-full bg-rose-50 px-2.5 py-1 text-rose-700">
+                  Debit spend below zero
+                </span>
+                <span className="rounded-full bg-sky-50 px-2.5 py-1 text-sky-700">
+                  Credits and payments above zero
+                </span>
+              </div>
+              <div className="h-56">
+                <Bar
+                  data={{
+                    labels: monthlyKeys.map(toMonthLabel),
+                    datasets: [
+                      {
+                        label: "Debit Spend",
+                        data: monthlyDebitValues.map((value) => value * -1),
+                        backgroundColor: "rgba(244, 63, 94, 0.55)",
+                        borderColor: "#f43f5e",
+                        borderWidth: 1.5,
+                        borderRadius: 18,
+                        borderSkipped: false,
+                        maxBarThickness: 34
+                      },
+                      {
+                        label: "Credits / Payments",
+                        data: monthlyCreditValues,
+                        backgroundColor: "rgba(56, 189, 248, 0.55)",
+                        borderColor: "#38bdf8",
+                        borderWidth: 1.5,
+                        borderRadius: 18,
+                        borderSkipped: false,
+                        maxBarThickness: 34
+                      }
+                    ]
+                  }}
+                  options={{
+                    maintainAspectRatio: false,
+                    interaction: {
+                      mode: "index",
+                      intersect: false
+                    },
+                    plugins: {
+                      legend: {
+                        position: "top",
+                        labels: {
+                          usePointStyle: true,
+                          padding: 18
+                        }
+                      },
+                      tooltip: {
+                        callbacks: {
+                          label: (context) => {
+                            const raw = Number(context.raw ?? 0);
+                            return `${context.dataset.label}: ${formatSignedCurrency(raw)}`;
+                          },
+                          afterBody: (items) => {
+                            const monthKey = monthlyKeys[items[0]?.dataIndex ?? 0];
+                            const flow = monthlyFlow.find((item) => item.month === monthKey);
+                            if (!flow) {
+                              return "";
+                            }
+                            return `Net: ${formatSignedCurrency(flow.net)}`;
+                          }
+                        }
+                      }
+                    },
+                    scales: {
+                      x: {
+                        grid: {
+                          display: false
+                        }
+                      },
+                      y: {
+                        ticks: {
+                          callback: (value) => formatSignedCurrency(Number(value))
+                        }
+                      }
+                    }
+                  }}
+                />
+              </div>
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <article className="rounded-xl border border-slate-200 bg-white/75 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Peak Debit</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {toMonthLabel(peakDebitMonth.month)}
+                  </p>
+                  <p className="text-xs text-slate-500">{formatCurrency(peakDebitMonth.debit)}</p>
+                </article>
+                <article className="rounded-xl border border-slate-200 bg-white/75 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Peak Credit</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {toMonthLabel(peakCreditMonth.month)}
+                  </p>
+                  <p className="text-xs text-slate-500">{formatCurrency(peakCreditMonth.credit)}</p>
+                </article>
+                <article className="rounded-xl border border-slate-200 bg-white/75 px-3 py-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500">Widest Gap</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {toMonthLabel(widestGapMonth.month)}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {widestGapMonth.net >= 0
+                      ? `Credits ahead ${formatCurrency(widestGapMonth.net)}`
+                      : `Debits ahead ${formatCurrency(Math.abs(widestGapMonth.net))}`}
+                  </p>
+                </article>
+              </div>
+            </>
+          )}
         </article>
 
         <article className="card-subtle rounded-lg p-3">
           <div className="mb-1 flex items-center justify-between gap-2">
-            <p className="text-sm font-semibold">2) Category Priority Ranking</p>
-            <HelpTip text="Bars are sorted highest to lowest. Focus first on the top 2-3 categories for fastest cost control." />
+            <p className="text-sm font-semibold">2) Category Spend Mix</p>
+            <HelpTip text="The doughnut shows how your spending is split across categories. Bigger slices mean a bigger share of your wallet." />
           </div>
           <p className="mb-2 text-xs text-slate-500">
-            Sorted bars make it obvious which categories drive most spending.
+            A doughnut view makes your share-of-wallet by category easier to scan at a glance.
           </p>
-          <div className="h-56">
-            <Bar
-              data={{
-                labels: categoryTop.map((item) => item.category),
-                datasets: [
-                  {
-                    label: "Spend",
-                    data: categoryTop.map((item) => item.amount),
-                    backgroundColor: "#0ea5e9"
-                  }
-                ]
-              }}
-              options={{
-                indexAxis: "y",
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: { x: { ticks: { callback: axisCurrency } } }
-              }}
-            />
-          </div>
+          {categoryMix.length === 0 ? (
+            <p className="text-sm text-slate-500">No category spending found.</p>
+          ) : (
+            <>
+              <div className="h-56">
+                <Doughnut
+                  data={{
+                    labels: categoryMix.map((item) => item.category),
+                    datasets: [
+                      {
+                        label: "Spend share",
+                        data: categoryMix.map((item) => item.amount),
+                        backgroundColor: categoryPalette.slice(0, categoryMix.length),
+                        borderColor: "#ffffff",
+                        borderWidth: 2,
+                        hoverOffset: 10
+                      }
+                    ]
+                  }}
+                  options={{
+                    maintainAspectRatio: false,
+                    cutout: "58%",
+                    plugins: {
+                      legend: {
+                        position: "bottom",
+                        labels: {
+                          usePointStyle: true,
+                          padding: 16
+                        }
+                      },
+                      tooltip: {
+                        callbacks: {
+                          label: (context) => {
+                            const amount = Number(context.raw ?? 0);
+                            const share = totalSpend > 0 ? (amount / totalSpend) * 100 : 0;
+                            return `${context.label}: ${formatCurrency(amount)} (${formatPercent(share)})`;
+                          }
+                        }
+                      }
+                    }
+                  }}
+                />
+              </div>
+              <div className="mt-3 rounded-xl border border-slate-200 bg-white/70 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Largest share
+                </p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">
+                  {topCategory.category} takes{" "}
+                  {formatPercent(totalSpend > 0 ? (topCategory.amount / totalSpend) * 100 : 0)} of
+                  debit spend.
+                </p>
+                <div className="mt-3 space-y-2">
+                  {categoryMix.map((item, index) => {
+                    const share = totalSpend > 0 ? (item.amount / totalSpend) * 100 : 0;
+                    return (
+                      <div
+                        key={item.category}
+                        className="flex items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span
+                            className="h-2.5 w-2.5 rounded-full"
+                            style={{ backgroundColor: categoryPalette[index] }}
+                          />
+                          <span className="truncate text-slate-600">{item.category}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-semibold text-slate-900">
+                            {formatCurrency(item.amount)}
+                          </span>
+                          <span className="ml-2 text-slate-500">{formatPercent(share)}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
         </article>
 
         <article className="card-subtle rounded-lg p-3">

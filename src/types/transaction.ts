@@ -1,12 +1,15 @@
 export type TransactionType = "debit" | "credit";
+export type TransactionSource = "CreditCard" | "UPI";
 
 export type Transaction = {
   id: string;
   date: string;
   description: string;
+  merchant?: string;
   amount: number;
   type: TransactionType;
   category: string;
+  source?: TransactionSource;
 };
 
 export type DatePreset = "last30" | "last3months" | "financialYear" | "custom";

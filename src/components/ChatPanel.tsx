@@ -4,6 +4,11 @@ import type { Transaction } from "../types/transaction";
 
 type ChatPanelProps = {
   transactions: Transaction[];
+  title?: string;
+  description?: string;
+  placeholder?: string;
+  suggestions?: string[];
+  initialAnswer?: string;
 };
 
 function formatCurrency(amount: number): string {
@@ -14,20 +19,30 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function ChatPanel({ transactions }: ChatPanelProps): JSX.Element {
-  const [query, setQuery] = useState("");
-  const [answer, setAnswer] = useState<string>(
-    "Ask a question about your statement data. Responses are generated locally from current data."
-  );
-  const [matched, setMatched] = useState<Transaction[]>([]);
+const DEFAULT_SUGGESTIONS = [
+  "How much did I spend on Amazon?",
+  "Top 5 merchants",
+  "How much spent in Feb 2026?",
+  "How much did I spend in Groceries?",
+  "Credits from IRCTC",
+  "How much did I spend on Swiggy?",
+  "Top 10 merchants",
+  "How much spent in Jan 2026?",
+  "How much did I spend in Travel?",
+  "Refunds from Amazon"
+];
 
-  const suggestions = [
-    "How much did I spend on Amazon?",
-    "Top 5 merchants",
-    "How much spent in Feb 2026?",
-    "How much did I spend in Groceries?",
-    "Credits from IRCTC"
-  ];
+export function ChatPanel({
+  transactions,
+  title = "Ask Your Statement",
+  description = "Uses in-browser rule-based analysis. No cloud calls.",
+  placeholder = "Ask a question about spending, merchants, categories, or months",
+  suggestions = DEFAULT_SUGGESTIONS,
+  initialAnswer = "Ask a question about your statement data. Responses are generated locally from current data."
+}: ChatPanelProps): JSX.Element {
+  const [query, setQuery] = useState("");
+  const [answer, setAnswer] = useState<string>(initialAnswer);
+  const [matched, setMatched] = useState<Transaction[]>([]);
 
   function runQuestion(question: string): void {
     const result = answerQuery(question, transactions);
@@ -37,17 +52,15 @@ export function ChatPanel({ transactions }: ChatPanelProps): JSX.Element {
 
   return (
     <section className="card p-4">
-      <h2 className="section-title">Ask Your Statement</h2>
-      <p className="mt-1 text-xs muted">
-        Uses in-browser rule-based analysis. No cloud calls.
-      </p>
+      <h2 className="section-title">{title}</h2>
+      <p className="mt-1 text-xs muted">{description}</p>
 
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <input
           type="text"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Ask a question about spending, merchants, categories, or months"
+          placeholder={placeholder}
           className="input-field w-full"
           onKeyDown={(event) => {
             if (event.key === "Enter") {

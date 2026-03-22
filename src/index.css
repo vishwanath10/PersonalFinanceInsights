@@ -128,6 +128,19 @@ body {
   color: var(--text-muted);
 }
 
+.story-section {
+  border-radius: 28px;
+  box-shadow: var(--shadow-soft);
+}
+
+.story-note {
+  backdrop-filter: blur(6px);
+}
+
+.story-chart-frame {
+  backdrop-filter: blur(8px);
+}
+
 .btn-primary {
   background: var(--accent);
   color: #fff;

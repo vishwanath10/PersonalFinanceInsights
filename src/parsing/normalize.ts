@@ -1,10 +1,11 @@
 import { categorizeDescription } from "../categorization/categorizer";
-import type { Transaction, TransactionType } from "../types/transaction";
+import type { Transaction, TransactionSource, TransactionType } from "../types/transaction";
 import { toIsoDate } from "../utils/date";
 
 type RawTransaction = {
   date: string;
   description: string;
+  merchant?: string;
   amount: number | string;
   type?: TransactionType | string;
   category?: string;
@@ -36,11 +37,12 @@ function inferType(value: number | string, declared?: string): TransactionType {
 
 export function normalizeTransactions(
   rawRows: RawTransaction[],
-  categoryRules: Record<string, string[]>
+  categoryRules: Record<string, string[]>,
+  options?: { source?: TransactionSource }
 ): Transaction[] {
   return rawRows
     .filter((row) => row.date && row.description && row.amount !== undefined)
-    .map((row, index) => {
+    .map<Transaction | null>((row, index) => {
       const normalizedDate = toIsoDate(row.date);
       if (!normalizedDate) {
         return null;
@@ -56,9 +58,11 @@ export function normalizeTransactions(
         id: `${normalizedDate}-${row.description}-${index}`,
         date: normalizedDate,
         description: row.description.trim(),
+        merchant: row.merchant?.trim() || undefined,
         amount,
         type,
-        category
+        category,
+        source: options?.source ?? "CreditCard"
       };
     })
     .filter((txn): txn is Transaction => txn !== null);

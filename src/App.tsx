@@ -23,7 +23,8 @@ import {
 } from "./parsing/errors";
 import { parseStatementFile } from "./parsing/parseFile";
 import type { StatementMetadata } from "./types/statement";
-import type { Filters, Transaction } from "./types/transaction";
+import type { DatePreset, Filters, Transaction } from "./types/transaction";
+import { loadStoredCategoryRules, persistCategoryRules } from "./utils/categoryRules";
 import { getFinancialYearRange, offsetDate, toIsoDate } from "./utils/date";
 
 ChartJS.register(
@@ -51,6 +52,7 @@ function getDefaultFilters(): Filters {
 const MAX_STATEMENT_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const UNSUPPORTED_STATEMENT_MESSAGE =
   "This file is either not a supported credit card statement yet, or it is not an actual credit card statement. Please upload a valid credit card statement PDF.";
+const CREDIT_CARD_CATEGORY_RULES_STORAGE_KEY = "credit-card-category-rules-v1";
 
 function getTransactionDateRange(transactions: Transaction[]): { start: string; end: string } | null {
   const dates = transactions.map((txn) => txn.date).filter(Boolean).sort();
@@ -63,6 +65,69 @@ function getTransactionDateRange(transactions: Transaction[]): { start: string; 
   };
 }
 
+const MONTH_NUMBERS: Record<string, number> = {
+  jan: 1,
+  january: 1,
+  feb: 2,
+  february: 2,
+  mar: 3,
+  march: 3,
+  apr: 4,
+  april: 4,
+  may: 5,
+  jun: 6,
+  june: 6,
+  jul: 7,
+  july: 7,
+  aug: 8,
+  august: 8,
+  sep: 9,
+  sept: 9,
+  september: 9,
+  oct: 10,
+  october: 10,
+  nov: 11,
+  november: 11,
+  dec: 12,
+  december: 12
+};
+
+function buildIsoDate(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function maxIsoDate(first: string, second: string): string {
+  return first > second ? first : second;
+}
+
+function minIsoDate(first: string, second: string): string {
+  return first < second ? first : second;
+}
+
+function parseNamedDate(
+  value: string,
+  fallbackYear?: number
+): { year: number; month: number; day: number; explicitYear: boolean } | null {
+  const match = /^(\d{1,2})\s+([A-Za-z]{3,9})(?:\s+(\d{4}))?$/.exec(value.trim());
+  if (!match) {
+    return null;
+  }
+
+  const month = MONTH_NUMBERS[match[2].toLowerCase()];
+  const yearText = match[3];
+  const year = yearText ? Number(yearText) : fallbackYear;
+  if (!month || !year) {
+    return null;
+  }
+
+  return {
+    year,
+    month,
+    day: Number(match[1]),
+    explicitYear: Boolean(yearText)
+  };
+}
+
 function getStatementPeriodRange(
   statementPeriod?: string
 ): { start: string; end: string } | null {
@@ -71,7 +136,7 @@ function getStatementPeriodRange(
   }
 
   const slashMatch =
-    /(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\s*-\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/.exec(
+    /(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\s*(?:-|to)\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/i.exec(
       statementPeriod
     );
   if (slashMatch) {
@@ -79,6 +144,42 @@ function getStatementPeriodRange(
     const end = toIsoDate(slashMatch[2]);
     if (start && end) {
       return { start, end };
+    }
+  }
+
+  const namedDashMatch =
+    /(\d{1,2}\s+[A-Za-z]{3,9}(?:\s+\d{4})?)\s*-\s*(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})/i.exec(
+      statementPeriod
+    );
+  if (namedDashMatch) {
+    const end = parseNamedDate(namedDashMatch[2]);
+    if (end) {
+      const provisionalStart = parseNamedDate(namedDashMatch[1], end.year);
+      if (provisionalStart) {
+        const startYear =
+          provisionalStart.explicitYear || provisionalStart.month <= end.month
+            ? provisionalStart.year
+            : provisionalStart.year - 1;
+        return {
+          start: buildIsoDate(startYear, provisionalStart.month, provisionalStart.day),
+          end: buildIsoDate(end.year, end.month, end.day)
+        };
+      }
+    }
+  }
+
+  const namedToMatch =
+    /(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})\s+to\s+(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})/i.exec(
+      statementPeriod
+    );
+  if (namedToMatch) {
+    const start = parseNamedDate(namedToMatch[1]);
+    const end = parseNamedDate(namedToMatch[2]);
+    if (start && end) {
+      return {
+        start: buildIsoDate(start.year, start.month, start.day),
+        end: buildIsoDate(end.year, end.month, end.day)
+      };
     }
   }
 
@@ -90,7 +191,61 @@ function getStatementPeriodRange(
     };
   }
 
+  const longToMatch =
+    /([A-Za-z]{3,9}\s+\d{1,2},\s+\d{4})\s+to\s+([A-Za-z]{3,9}\s+\d{1,2},\s+\d{4})/i.exec(
+      statementPeriod
+    );
+  if (longToMatch) {
+    const start = toIsoDate(longToMatch[1]);
+    const end = toIsoDate(longToMatch[2]);
+    if (start && end) {
+      return { start, end };
+    }
+  }
+
   return null;
+}
+
+function getDatasetRange(
+  transactions: Transaction[],
+  metadata: StatementMetadata
+): { start: string; end: string } | null {
+  return getStatementPeriodRange(metadata.statementPeriod) ?? getTransactionDateRange(transactions);
+}
+
+function getPresetDateRange(
+  preset: Exclude<DatePreset, "custom">,
+  transactions: Transaction[],
+  metadata: StatementMetadata
+): { start: string; end: string } {
+  const datasetRange = getDatasetRange(transactions, metadata);
+  const anchorDate = datasetRange?.end ?? toIsoDate(new Date());
+  const anchor = new Date(`${anchorDate}T12:00:00`);
+
+  if (preset === "financialYear") {
+    const range = getFinancialYearRange(anchor);
+    if (!datasetRange) {
+      return range;
+    }
+    return {
+      start: maxIsoDate(range.start, datasetRange.start),
+      end: minIsoDate(range.end, datasetRange.end)
+    };
+  }
+
+  const days = preset === "last30" ? -30 : -90;
+  const start = offsetDate(days, anchor);
+  if (!datasetRange) {
+    return {
+      start,
+      end: anchorDate
+    };
+  }
+
+  return {
+    start: maxIsoDate(start, datasetRange.start),
+    end: datasetRange.end
+  };
 }
 
 function applyDatasetFilters(
@@ -98,14 +253,11 @@ function applyDatasetFilters(
   transactions: Transaction[],
   metadata: StatementMetadata
 ): void {
-  const range = getStatementPeriodRange(metadata.statementPeriod) ?? getTransactionDateRange(transactions);
-  if (!range) {
-    return;
-  }
+  const range = getPresetDateRange("last3months", transactions, metadata);
 
   setFilters((prev) => ({
     ...prev,
-    preset: "custom",
+    preset: "last3months",
     startDate: range.start,
     endDate: range.end
   }));
@@ -141,8 +293,9 @@ export default function App(): JSX.Element {
     return "light";
   });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categoryRules, setCategoryRules] =
-    useState<Record<string, string[]>>(defaultCategoryRules);
+  const [categoryRules, setCategoryRules] = useState<Record<string, string[]>>(() =>
+    loadStoredCategoryRules(CREDIT_CARD_CATEGORY_RULES_STORAGE_KEY, defaultCategoryRules)
+  );
   const [filters, setFilters] = useState<Filters>(getDefaultFilters);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -154,32 +307,34 @@ export default function App(): JSX.Element {
       return;
     }
 
-    if (filters.preset === "last30") {
-      setFilters((prev) => ({
-        ...prev,
-        startDate: offsetDate(-30),
-        endDate: toIsoDate(new Date())
-      }));
-    } else if (filters.preset === "last3months") {
-      setFilters((prev) => ({
-        ...prev,
-        startDate: offsetDate(-90),
-        endDate: toIsoDate(new Date())
-      }));
-    } else if (filters.preset === "financialYear") {
-      const range = getFinancialYearRange();
-      setFilters((prev) => ({
+    const range = getPresetDateRange(filters.preset, transactions, statementMetadata);
+    setFilters((prev) => {
+      if (prev.preset === "custom") {
+        return prev;
+      }
+      if (prev.startDate === range.start && prev.endDate === range.end) {
+        return prev;
+      }
+      return {
         ...prev,
         startDate: range.start,
         endDate: range.end
-      }));
-    }
-  }, [filters.preset]);
+      };
+    });
+  }, [filters.preset, statementMetadata.statementPeriod, transactions]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
     window.localStorage.setItem("theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    persistCategoryRules(
+      CREDIT_CARD_CATEGORY_RULES_STORAGE_KEY,
+      categoryRules,
+      defaultCategoryRules
+    );
+  }, [categoryRules]);
 
   useEffect(() => {
     setTransactions((prev) => applyCategories(prev, categoryRules));
@@ -325,6 +480,8 @@ export default function App(): JSX.Element {
         sortField={filters.sortField}
         sortDirection={filters.sortDirection}
         categoryRules={categoryRules}
+        onCategoryRulesSave={setCategoryRules}
+        onCategoryRulesReset={() => setCategoryRules(defaultCategoryRules)}
       />
     </main>
   );

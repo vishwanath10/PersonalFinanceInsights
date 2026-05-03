@@ -245,7 +245,7 @@ export function AnalysisLandingPage({ onSelect }: AnalysisLandingPageProps): JSX
             className="btn-primary inline-flex items-center gap-2"
           >
             <span>Open Git Repository</span>
-            <span aria-hidden="true">-&gt;</span>
+            <span aria-hidden="true">{"->"}</span>
           </a>
         </div>
       </section>

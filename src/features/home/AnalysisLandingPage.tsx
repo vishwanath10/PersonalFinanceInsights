@@ -1,6 +1,8 @@
 import { useId } from "react";
 import { UI_STRINGS } from "../../constants/strings";
 
+const GITHUB_REPO_URL = "https://github.com/vishwanath10/PersonalFinanceInsights";
+
 type AnalysisLandingPageProps = {
   onSelect: (mode: "credit-card" | "upi") => void;
 };
@@ -126,8 +128,8 @@ export function AnalysisLandingPage({ onSelect }: AnalysisLandingPageProps): JSX
         </article>
       </section>
 
-      <section className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-        <article className="card p-6">
+      <section className="grid grid-cols-1 gap-5 xl:items-start xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <article className="card flex flex-col p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
             How It Works
           </p>
@@ -162,6 +164,22 @@ export function AnalysisLandingPage({ onSelect }: AnalysisLandingPageProps): JSX
               </article>
             ))}
           </div>
+          <div className="mt-5 rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(248,250,252,0.92))] p-4 dark:border-slate-700 dark:bg-[linear-gradient(180deg,_rgba(15,23,42,0.82),_rgba(15,23,42,0.58))]">
+            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              Built for a quick first pass
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
+              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 dark:border-slate-700 dark:bg-slate-900/70">
+                No signup required
+              </span>
+              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 dark:border-slate-700 dark:bg-slate-900/70">
+                Local parsing
+              </span>
+              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 dark:border-slate-700 dark:bg-slate-900/70">
+                Sample data available
+              </span>
+            </div>
+          </div>
         </article>
 
         <article className="card p-6">
@@ -192,18 +210,44 @@ export function AnalysisLandingPage({ onSelect }: AnalysisLandingPageProps): JSX
             ].map((item) => (
               <article
                 key={item.title}
-                className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700 dark:bg-slate-900/50"
+                className="grid min-h-[176px] grid-rows-[auto_1fr] rounded-2xl border border-slate-200 bg-slate-50/80 p-5 dark:border-slate-700 dark:bg-slate-900/50"
               >
                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                   {item.title}
                 </p>
-                <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">
                   {item.body}
                 </p>
               </article>
             ))}
           </div>
         </article>
+      </section>
+
+      <section className="card flex flex-col gap-4 p-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="max-w-2xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+            Open Source
+          </p>
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
+            Review the code, parsers, and UI architecture directly on GitHub
+          </h2>
+          <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+            This project is open to explore, so you can understand how local parsing, insights,
+            and visual workflows are implemented.
+          </p>
+        </div>
+        <div className="flex shrink-0">
+          <a
+            href={GITHUB_REPO_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="btn-primary inline-flex items-center gap-2"
+          >
+            <span>Open Git Repository</span>
+            <span aria-hidden="true">↗</span>
+          </a>
+        </div>
       </section>
     </main>
   );
